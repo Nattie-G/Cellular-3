@@ -1,7 +1,7 @@
 function love.conf(t)
     t.window.title = "cellular automaton"
     t.window.width = 1600
-    t.window.height = 1200
+    t.window.height = 1600
 
     t.modules.audio = false
     t.modules.graphics = true           -- Enable the graphics module (boolean)

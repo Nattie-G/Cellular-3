@@ -5,7 +5,7 @@ function love.keypressed(key)
   elseif key == 'p' then
     paused = not paused
   elseif key == '.' then
-    tick()
+    pull_updates()
   end
 end
 

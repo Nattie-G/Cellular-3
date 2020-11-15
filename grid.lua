@@ -4,10 +4,12 @@ local colour_map = {[0] = {0.3, 0.3, 0.3},
 
 
 function new_grid(columns, rows)
+  -- create a new grid of size columns + 2 x rows + 2
+  -- the extra two columns and rows are padding
   local grid = {}
-  for c = 1, columns do
+  for c = 0, columns + 1 do
     grid[c] = {}
-    for r = 1, rows do
+    for r = 0, rows + 1 do
       grid[c][r] = 0
     end
   end
@@ -17,8 +19,8 @@ end
 
 
 function new_cell_buffer(grid, sx, sy)
-  local w = #grid * sx
-  local h = #grid[1] * sy
+  local w = (#grid - 1)   * sx
+  local h = (#grid[1] -1) * sy
   local blank = love.graphics.newCanvas(w, h)
   love.graphics.setCanvas(blank)
   love.graphics.clear(0, 0, 0, 0.0)
@@ -27,8 +29,8 @@ function new_cell_buffer(grid, sx, sy)
 end
 
 function new_bg_buffer(grid, sx, sy)
-  local w = #grid  * sx
-  local h = #grid[1]     * sy
+  local w = (#grid - 1)  * sx
+  local h = (#grid[1] - 1)     * sy
   local img = love.graphics.newCanvas(w, h)
   love.graphics.setCanvas(img)
   love.graphics.setColor(colour_map[0])
@@ -59,9 +61,9 @@ function draw_cells(grid, gridBuffer, sx, sy)
   love.graphics.setCanvas(gridBuffer)
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.setColor(colour_map[1])
-  for c, col in ipairs(grid) do
-    for r, val in ipairs(col) do
-      if val == 1 then
+  for c = 1, #grid - 1 do
+    for r = 1, #grid[1] - 1 do
+      if grid[c][r] == 1 then
           local px = (c - 1) * sx
           local py = (r - 1) * sy
         if (sx > 3) and (sy > 3) then
@@ -85,8 +87,8 @@ function print_board(board)
   for i=1, #board[1] do
     lines[i] = '  '
   end
-  for c, col in ipairs(board) do
-    for r, val in ipairs(board[1]) do
+  for c = 1, #board - 1 do
+    for r = 1, #board[1] - 1 do
       local v = board[c][r]
       if v == nil then v = '*' end
       if v == 0 then v = '.' end
@@ -99,8 +101,8 @@ function print_board(board)
 end
 
 function randomise_board(board)
-  for c = 1, #board do
-    for r = 1, #board[1] do
+  for c = 1, #board - 1 do
+    for r = 1, #board[1] - 1 do
       board[c][r] = love.math.random(0, 1)
     end
   end
@@ -109,10 +111,11 @@ end
 
 function split_board(board, column)
   -- helper funtion for sync_threads_clear_buffers()
+  -- provides overlap of 1
   local half = column
   local left_board, right_board = {}, {}
 
-  for i = 1, half do
+  for i = 0, half + 1 do
     left_board[i] = board[i]
     right_board[i] = board[half + i]
   end

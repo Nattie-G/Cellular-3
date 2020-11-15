@@ -1,12 +1,11 @@
 -- main.lua
--- NO BUFFERS
 require 'grid'
 require 'controls'
 
 function love.load()
   -- GAME BOARD
-  grid_cols = 250
-  grid_rows = 250
+  grid_cols = 200
+  grid_rows = 200
   my_grid = new_grid(grid_cols, grid_rows)
 
   -- GRAPHICS SCALE & POSITIONING
@@ -16,8 +15,8 @@ function love.load()
   cam_x = 0
   cam_y = 0
   zoom = 0.50
-  displayX = (WIDTH  / 2) - (#my_grid * scaleX * zoom * 0.5)
-  displayY = (HEIGHT / 2) - (#my_grid[1] * scaleY * zoom * 0.5)
+  displayX = (WIDTH  / 2) - (grid_cols * scaleX * zoom * 0.5)
+  displayY = (HEIGHT / 2) - (grid_rows * scaleY * zoom * 0.5)
 
   -- GRAPHICS SETUP
   bg = new_bg_buffer(my_grid, scaleX, scaleY)
@@ -25,16 +24,24 @@ function love.load()
   love.graphics.setDefaultFilter("nearest", "nearest", 1)
 
   -- THREADS
-  worker_thread = love.thread.newThread('thread.lua')
-  worker_thread:start('worker')
+  left_thread  = love.thread.newThread('thread.lua')
+  right_thread = love.thread.newThread('thread.lua')
+  left_thread:start('left')
+  right_thread:start('right')
 
   -- CHANNELS
-  worker_channel = love.thread.getChannel('worker')
-  worker_input = love.thread.getChannel('inputworker')
+  left_channel = love.thread.getChannel('left')
+  left_input = love.thread.getChannel('inputleft')
+
+  right_channel = love.thread.getChannel('right')
+  right_input = love.thread.getChannel('inputright')
+
+  push_edges()
 
   -- MISC
   POWERS = {2^8, 2^7, 2^6, 2^5, 2^4, 2^3, 2^2, 2^1, 2^0}
   is_modified = false
+  instr_given = true
 
   --TIME
   paused = true
@@ -47,52 +54,77 @@ function love.update(dt)
   if paused then
     frame_count = frame_count
   else
+
     frame_count = frame_count + dt
+    if is_modified then
+      sync_threads_clear_buffers()
+      is_modified = false
+      instr_given = false
+    elseif not instr_given then
+      push_edges()
+      instr_given = true
+    end
+
   end
 
 
   if frame_count > limit then
-    if is_modified then
-      sync_threads_clear_buffers()
-      is_modified = false
-      await_updates()
-    else
-      pull_updates()
-    end
-    frame_count = 0
+    await_updates()
+    push_edges()
+    instr_given = true
   end
+  frame_count = 0
 
 end
 
+function push_edges()
+  local right_edge = my_grid[(grid_cols / 2) + 1]
+  local left_edge  = my_grid[grid_cols / 2]
+  left_input:push(right_edge)
+  right_input:push(left_edge)
+end
+
+
 function sync_threads_clear_buffers()
-  worker_input:push(my_grid)
+  local left_half, right_half = split_board(my_grid, grid_cols / 2)
+  left_input:push(left_half)
+  right_input:push(right_half)
   await_discard()
 end
 
 
 function await_discard()
   local t1 = love.timer.getTime()
-  while worker_channel:getCount() == 0 do
+  while (left_channel:getCount() + right_channel:getCount() < 2) do
     love.timer.sleep(1/ 1000)
     if love.timer.getTime() - t1 > 5 then error("timed out in await_discard") end
   end
-  worker_channel:pop()
+  left_channel:pop()
+  right_channel:pop()
 end
 
 function await_updates()
   local t1 = love.timer.getTime()
-  while (worker_channel:getCount() == 0) do
+  while (left_channel:getCount() + right_channel:getCount() < 2) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_updates") end
-    --love.timer.sleep(1/ 1000)
+    love.timer.sleep(1/ 1000)
   end
   pull_updates()
 end
 
 
 function pull_updates()
-  local new_board = worker_channel:pop()
-  if new_board then
-    my_grid = new_board
+  local half_cols = grid_cols / 2
+  --if left_board and right_board then
+  if left_channel:getCount() + right_channel:getCount() == 2 then
+    local left_board  = left_channel:pop()
+    local right_board = right_channel:pop()
+    for c = 1, half_cols do
+      for r = 1, grid_rows do
+        my_grid[c][r] = left_board[c][r]
+        my_grid[half_cols + (c)][r] = right_board[c][r]
+      end
+    end
   end
 end
 
@@ -176,8 +208,8 @@ end
 
 function resize(wheelmotion)
   zoom = math.max(zoom + (wheelmotion * 0.125), 0.25)
-  local grid_pixel_size_x = #my_grid * scaleX * zoom
-  local grid_pixel_size_y = #my_grid[1] * scaleY * zoom
+  local grid_pixel_size_x = grid_cols * scaleX * zoom
+  local grid_pixel_size_y = grid_rows * scaleY * zoom
 
   displayX = (WIDTH  / 2) - (grid_pixel_size_x / 2)
   displayY = (HEIGHT / 2) - (grid_pixel_size_y / 2)

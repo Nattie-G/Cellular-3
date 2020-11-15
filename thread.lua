@@ -1,4 +1,4 @@
---thread.lua nobuf2
+--thread.lua (ground up)
 print("thread loaded")
 local ruleset = require 'sand'
 require 'love.math'
@@ -7,8 +7,9 @@ require 'grid'
 
 local name = ...
 
-local grid_cols = 250
-local grid_rows = 250
+local grid_cols = 100
+local grid_rows = 200
+local extra_col = name == 'left' and grid_cols + 1 or 0
 
 local update_channel = love.thread.getChannel(name)
 local input_channel = love.thread.getChannel('input' .. name)
@@ -35,15 +36,8 @@ function tick3()
 
           local gy = r + dy
           local gx = c + dx
-          local in_bounds_y = (gy > 0) and (gy <= grid_rows)
-          local in_bounds_x = (gx > 0) and (gx <= grid_cols)
+          rule_index = rule_index + (grid[gx][gy] * POWERS[pow_iter])
 
-          if in_bounds_y then
-            if in_bounds_x then
-              rule_index = rule_index + (grid[gx][gy] * POWERS[pow_iter])
-              -- else add 0 to rule index for the oob cell
-            end
-          end
         end
       end
 
@@ -59,14 +53,16 @@ function tick3()
 end
 
 while true do
-  if update_channel:getCount() < 1 then
-    tick3()
-    update_channel:supply(global_grid)
+  local msg = input_channel:demand()
+  if type(msg[1]) == 'number' then
+    global_grid[extra_col] = msg
+  else
+    global_grid = msg
   end
 
-  if input_channel:getCount() > 0 then
-    global_grid = input_channel:pop()
-  end
+  tick3()
+  update_channel:push(global_grid)
+
 
   love.timer.sleep(1 / 60)
 end

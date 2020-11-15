@@ -112,12 +112,24 @@ end
 function split_board(board, column)
   -- helper funtion for sync_threads_clear_buffers()
   -- provides overlap of 1
-  local half = column
   local left_board, right_board = {}, {}
 
-  for i = 0, half + 1 do
+  for i = 0, column + 1 do
     left_board[i] = board[i]
-    right_board[i] = board[half + i]
+    right_board[i] = board[column + i]
   end
   return left_board, right_board
+end
+
+function tri_split_board(board, third)
+  -- helper funtion for sync_threads_clear_buffers()
+  -- provides overlap of 1
+  local left_board, right_board, cent_board = {}, {}, {}
+
+  for i = 0, third + 1 do
+    left_board[i] = board[i]
+    cent_board[i] = board[third + i]
+    right_board[i] = board[(2 * third) + i]
+  end
+  return left_board, right_board, cent_board
 end

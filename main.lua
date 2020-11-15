@@ -4,8 +4,8 @@ require 'controls'
 
 function love.load()
   -- GAME BOARD
-  grid_cols = 200
-  grid_rows = 200
+  grid_cols = 300
+  grid_rows = 300
   my_grid = new_grid(grid_cols, grid_rows)
 
   -- GRAPHICS SCALE & POSITIONING
@@ -26,8 +26,10 @@ function love.load()
   -- THREADS
   left_thread  = love.thread.newThread('thread.lua')
   right_thread = love.thread.newThread('thread.lua')
+  cent_thread  = love.thread.newThread('thread.lua')
   left_thread:start('left')
   right_thread:start('right')
+  cent_thread:start('center')
 
   -- CHANNELS
   left_channel = love.thread.getChannel('left')
@@ -35,6 +37,9 @@ function love.load()
 
   right_channel = love.thread.getChannel('right')
   right_input = love.thread.getChannel('inputright')
+
+  cent_channel = love.thread.getChannel('center')
+  cent_input = love.thread.getChannel('inputcenter')
 
   push_edges()
 
@@ -46,7 +51,7 @@ function love.load()
   --TIME
   paused = true
   frame_count = 0
-  limit = 0.00
+  limit = 0.05
 
 end
 
@@ -54,17 +59,16 @@ function love.update(dt)
   if paused then
     frame_count = frame_count
   else
-
     frame_count = frame_count + dt
     if is_modified then
       sync_threads_clear_buffers()
       is_modified = false
       instr_given = false
-    elseif not instr_given then
+    end
+    if not instr_given then
       push_edges()
       instr_given = true
     end
-
   end
 
 
@@ -72,40 +76,49 @@ function love.update(dt)
     await_updates()
     push_edges()
     instr_given = true
+    frame_count = 0
   end
-  frame_count = 0
 
 end
 
 function push_edges()
-  local right_edge = my_grid[(grid_cols / 2) + 1]
-  local left_edge  = my_grid[grid_cols / 2]
-  left_input:push(right_edge)
-  right_input:push(left_edge)
+  local third = grid_cols / 3
+  local left_center_edge = my_grid[third]
+  local center_left_edge = my_grid[third + 1]
+  local center_right_edge = my_grid[2 * third]
+  local right_center_edge = my_grid[2 * third + 1]
+  left_input:push(center_left_edge)
+  right_input:push(center_right_edge)
+  cent_input:push({left_center_edge, right_center_edge})
 end
 
 
 function sync_threads_clear_buffers()
-  local left_half, right_half = split_board(my_grid, grid_cols / 2)
-  left_input:push(left_half)
-  right_input:push(right_half)
+  local third = grid_cols / 3
+  local lb, rb, cb = tri_split_board(my_grid, third)
+  left_input:push(lb)
+  right_input:push(rb)
+  cent_input:push(cb)
   await_discard()
 end
 
 
 function await_discard()
   local t1 = love.timer.getTime()
-  while (left_channel:getCount() + right_channel:getCount() < 2) do
+  local lc, rc, cc = left_channel, right_channel, cent_channel
+  while (lc:getCount() + rc:getCount() + cc:getCount() < 3) do
     love.timer.sleep(1/ 1000)
     if love.timer.getTime() - t1 > 5 then error("timed out in await_discard") end
   end
   left_channel:pop()
   right_channel:pop()
+  cent_channel:pop()
 end
 
 function await_updates()
   local t1 = love.timer.getTime()
-  while (left_channel:getCount() + right_channel:getCount() < 2) do
+  local lc, rc, cc = left_channel, right_channel, cent_channel
+  while (lc:getCount() < 0 and rc:getCount() < 0 and cc:getCount() < 0) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_updates") end
     love.timer.sleep(1/ 1000)
   end
@@ -114,15 +127,18 @@ end
 
 
 function pull_updates()
-  local half_cols = grid_cols / 2
-  --if left_board and right_board then
-  if left_channel:getCount() + right_channel:getCount() == 2 then
-    local left_board  = left_channel:pop()
-    local right_board = right_channel:pop()
-    for c = 1, half_cols do
+  local third = grid_cols / 3
+  local lc, rc, cc = left_channel, right_channel, cent_channel
+  local cond = lc:getCount() > 0 and rc:getCount() > 0 and cc:getCount() > 0
+  if cond then
+    local left_board  = lc:pop()
+    local right_board = rc:pop()
+    local cent_board  = cc:pop()
+    for c = 1, third do
       for r = 1, grid_rows do
         my_grid[c][r] = left_board[c][r]
-        my_grid[half_cols + (c)][r] = right_board[c][r]
+        my_grid[third + c][r] = cent_board[c][r]
+        my_grid[2 * third + c][r] = right_board[c][r]
       end
     end
   end
@@ -140,6 +156,8 @@ function love.draw()
 
   love.graphics.line(WIDTH / 2, 0, WIDTH / 2, HEIGHT)
   love.graphics.line(0, HEIGHT / 2, WIDTH, HEIGHT / 2)
+
+  love.graphics.print(tostring(love.timer.getFPS()))
 end
 
 
@@ -158,6 +176,7 @@ function place_cell(x, y)
   end
   print("click: ", c, r)
   flip_cell(c, r)
+  is_modified = true
 end
 
 function cell_at_pix(x, y)

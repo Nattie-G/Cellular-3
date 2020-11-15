@@ -6,6 +6,7 @@ function love.keypressed(key)
     paused = not paused
   elseif key == '.' then
     pull_updates()
+    push_edges()
   end
 end
 

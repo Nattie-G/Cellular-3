@@ -14,7 +14,7 @@ function love.load()
   scaleY = 8
   cam_x = 0
   cam_y = 0
-  zoom = 0.50
+  zoom = 2.50
   displayX = (WIDTH  / 2) - (grid_cols * scaleX * zoom * 0.5)
   displayY = (HEIGHT / 2) - (grid_rows * scaleY * zoom * 0.5)
 
@@ -46,11 +46,12 @@ function love.load()
   -- MISC
   POWERS = {2^8, 2^7, 2^6, 2^5, 2^4, 2^3, 2^2, 2^1, 2^0}
   is_modified = false
+  tool = 1
 
   --TIME
   paused = true
   frame_count = 0
-  limit = 0.03
+  limit = 0.00
 
 end
 
@@ -70,6 +71,7 @@ function love.update(dt)
     await_updates()
     push_edges()
     frame_count = 0
+    --print_board(my_grid)
   end
 
 end
@@ -100,7 +102,7 @@ function await_discard()
   local lc, rc, cc = left_channel, right_channel, cent_channel
   while (lc:getCount() < 1 or rc:getCount() < 1 or cc:getCount() < 1) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_discard") end
-    love.timer.sleep(1/ 1000)
+    --love.timer.sleep(1/ 1000)
   end
   left_channel:clear()
   right_channel:clear()
@@ -112,7 +114,7 @@ function await_updates()
   local lc, rc, cc = left_channel, right_channel, cent_channel
   while (lc:getCount() < 1 or rc:getCount() < 1 or cc:getCount() < 1) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_updates") end
-    love.timer.sleep(1/ 1000)
+    --love.timer.sleep(1/ 1000)
   end
   pull_updates()
 end
@@ -189,6 +191,22 @@ function cell_at_pix(x, y)
   end
 end
 
+function tool_place_cell(x, y)
+  c, r = cell_at_pix(x, y)
+  if not c then
+    return nil
+  end
+  tool_flip_cell(c, r)
+  is_modified = true
+end
+
+function tool_flip_cell(c, r)
+  if my_grid[c][r] == tool then
+    my_grid[c][r] = 0
+  else
+    my_grid[c][r] = tool
+  end
+end
 
 function draw_path(x, y, dx, dy)
   local gox, goy = cell_at_pix(x, y) -- Grid Original X/Y
@@ -212,7 +230,7 @@ function draw_path(x, y, dx, dy)
       r = r + stepY
       gdy = gdy - stepY
     end
-    flip_cell(c, r)
+    tool_flip_cell(c, r)
     is_modified = true
   end
 end

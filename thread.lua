@@ -1,6 +1,6 @@
 --thread.lua (ground up)
 print("thread loaded")
-local ruleset = require 'sand'
+local ruleset = require 'life'
 require 'love.math'
 require 'love.timer'
 require 'grid'
@@ -18,8 +18,16 @@ global_grid  = new_grid(grid_cols, grid_rows)
 global_grid2 = new_grid(grid_cols, grid_rows)
 randomise_board(global_grid)
 
-local POWERS = {2^0, 2^1, 2^2, 2^3, 2^4, 2^5, 2^6, 2^7, 2^8}
-
+local POWERS
+do
+  for i = 2, 16 do
+    if #ruleset == (i^9 - 1) then 
+      POWERS = {i^0, i^1, i^2, i^3, i^4, i^5, i^6, i^7, i^8}
+      POWERS[0] = 0
+      break
+    end
+  end
+end
 
 function tick3()
   local insert = table.insert
@@ -43,12 +51,16 @@ function tick3()
             print("name", name)
             print("grid[gx][gy] is nil", gx, gy)
           end
-          rule_index = rule_index + (grid[gx][gy] * POWERS[pow_iter])
+          local idx = grid[gx][gy] * POWERS[pow_iter]
+          rule_index = rule_index + idx
 
         end
       end
 
     local state = ruleset[rule_index]
+    if state == nil then
+      print("nil state rule #: ", rule_index)
+    end
     grid2[c][r] = state
 
     end
@@ -93,7 +105,7 @@ else
       update_channel:push(global_grid)
     end
 
-    love.timer.sleep(1 / 1000)
+    --love.timer.sleep(1 / 1000)
   end
 
 end

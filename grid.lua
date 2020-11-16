@@ -1,6 +1,7 @@
 local colour_map = {[0] = {0.3, 0.3, 0.3}, 
                     [1] = {0.8, 0.8, 0.8},
-                    [2] = {0.0, 0.0, 0.0}}
+                    [2] = {0.9, 0.3, 0.3},
+                    [3] = {0.3, 0.9, 0.3}}
 
 
 function new_grid(columns, rows)
@@ -10,7 +11,11 @@ function new_grid(columns, rows)
   for c = 0, columns + 1 do
     grid[c] = {}
     for r = 0, rows + 1 do
-      grid[c][r] = 0
+      if r == rows + 1 then
+        grid[c][r] = 0
+      else
+        grid[c][r] = 0
+      end
     end
   end
 
@@ -35,7 +40,7 @@ function new_bg_buffer(grid, sx, sy)
   love.graphics.setCanvas(img)
   love.graphics.setColor(colour_map[0])
   love.graphics.rectangle("fill", 1, 1, w, h)
-  love.graphics.setColor(colour_map[2])
+  love.graphics.setColor(0, 0, 0, 1)
 
   if sx > 2 then
     for px = sx, w, sx do
@@ -60,18 +65,20 @@ function draw_cells(grid, gridBuffer, sx, sy)
   local lgdraw = love.graphics.draw
   love.graphics.setCanvas(gridBuffer)
   love.graphics.clear(0, 0, 0, 0)
-  love.graphics.setColor(colour_map[1])
-  for c = 1, #grid - 1 do
-    for r = 1, #grid[1] - 1 do
-      if grid[c][r] == 1 then
-          local px = (c - 1) * sx
-          local py = (r - 1) * sy
-        if (sx > 3) and (sy > 3) then
-          lgdraw(rect, 1 + px, 1 + py, 0, sx - 2, sy - 2)
-        elseif (sx > 2) and (sy > 2) then
-          lgdraw(rect, 0 + px, 0 + py, 0, sx - 1, sy - 1)
-        else
-          lgdraw(rect, px, py, 0, sx, sy)
+  for i = 0, #colour_map do
+    love.graphics.setColor(colour_map[i])
+    for c = 1, #grid - 1 do
+      for r = 1, #grid[1] - 1 do
+        if grid[c][r] == i then
+            local px = (c - 1) * sx
+            local py = (r - 1) * sy
+          if (sx > 3) and (sy > 3) then
+            lgdraw(rect, 1 + px, 1 + py, 0, sx - 2, sy - 2)
+          elseif (sx > 2) and (sy > 2) then
+            lgdraw(rect, 0 + px, 0 + py, 0, sx - 1, sy - 1)
+          else
+            lgdraw(rect, px, py, 0, sx, sy)
+          end
         end
       end
     end
@@ -103,7 +110,12 @@ end
 function randomise_board(board)
   for c = 1, #board - 1 do
     for r = 1, #board[1] - 1 do
-      board[c][r] = love.math.random(0, 1)
+      local rand = love.math.random(0, 4)
+      if rand == 0 then
+        board[c][r] = 1
+      else
+        board[c][r] = 0
+      end
     end
   end
 end

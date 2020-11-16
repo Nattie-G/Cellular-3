@@ -1,18 +1,22 @@
+local tool_opts = {['0'] = 0, ['1'] = 1, ['2'] = 2, ['3'] = 3}
 function love.keypressed(key)
   if key == 'r' then
     randomise_board(my_grid)
     generation = 0
+    is_modified = true
   elseif key == 'p' then
     paused = not paused
   elseif key == '.' then
     pull_updates()
     push_edges()
+  elseif tool_opts[key] then
+    tool = tool_opts[key]
   end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
   if button == 1 then
-    place_cell(x, y)
+    tool_place_cell(x, y)
   end
 end
 

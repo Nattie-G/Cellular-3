@@ -65,7 +65,7 @@ function draw_cells(grid, gridBuffer, sx, sy)
   local lgdraw = love.graphics.draw
   love.graphics.setCanvas(gridBuffer)
   love.graphics.clear(0, 0, 0, 0)
-  for i = 0, #colour_map do
+  for i = 1, #colour_map do
     love.graphics.setColor(colour_map[i])
     for c = 1, #grid - 1 do
       for r = 1, #grid[1] - 1 do

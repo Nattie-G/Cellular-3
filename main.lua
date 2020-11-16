@@ -46,12 +46,11 @@ function love.load()
   -- MISC
   POWERS = {2^8, 2^7, 2^6, 2^5, 2^4, 2^3, 2^2, 2^1, 2^0}
   is_modified = false
-  instr_given = true
 
   --TIME
   paused = true
   frame_count = 0
-  limit = 0.05
+  limit = 0.03
 
 end
 
@@ -61,21 +60,15 @@ function love.update(dt)
   else
     frame_count = frame_count + dt
     if is_modified then
-      sync_threads_clear_buffers()
+      await_discard()
+      push_input()
       is_modified = false
-      instr_given = false
-    end
-    if not instr_given then
-      push_edges()
-      instr_given = true
     end
   end
-
 
   if frame_count > limit then
     await_updates()
     push_edges()
-    instr_given = true
     frame_count = 0
   end
 
@@ -93,32 +86,31 @@ function push_edges()
 end
 
 
-function sync_threads_clear_buffers()
+function push_input()
   local third = grid_cols / 3
   local lb, rb, cb = tri_split_board(my_grid, third)
   left_input:push(lb)
   right_input:push(rb)
   cent_input:push(cb)
-  await_discard()
 end
 
 
 function await_discard()
   local t1 = love.timer.getTime()
   local lc, rc, cc = left_channel, right_channel, cent_channel
-  while (lc:getCount() + rc:getCount() + cc:getCount() < 3) do
-    love.timer.sleep(1/ 1000)
+  while (lc:getCount() < 1 or rc:getCount() < 1 or cc:getCount() < 1) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_discard") end
+    love.timer.sleep(1/ 1000)
   end
-  left_channel:pop()
-  right_channel:pop()
-  cent_channel:pop()
+  left_channel:clear()
+  right_channel:clear()
+  cent_channel:clear()
 end
 
 function await_updates()
   local t1 = love.timer.getTime()
   local lc, rc, cc = left_channel, right_channel, cent_channel
-  while (lc:getCount() < 0 and rc:getCount() < 0 and cc:getCount() < 0) do
+  while (lc:getCount() < 1 or rc:getCount() < 1 or cc:getCount() < 1) do
     if love.timer.getTime() - t1 > 5 then error("timed out in await_updates") end
     love.timer.sleep(1/ 1000)
   end

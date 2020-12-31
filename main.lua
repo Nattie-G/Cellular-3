@@ -4,8 +4,8 @@ require 'controls'
 
 function love.load()
   -- GAME BOARD
-  grid_cols = 300
-  grid_rows = 300
+  grid_cols = 360
+  grid_rows = 360
   my_grid = new_grid(grid_cols, grid_rows)
 
   -- GRAPHICS SCALE & POSITIONING
@@ -14,7 +14,7 @@ function love.load()
   scaleY = 8
   cam_x = 0
   cam_y = 0
-  zoom = 2.50
+  zoom = 0.625
   displayX = (WIDTH  / 2) - (grid_cols * scaleX * zoom * 0.5)
   displayY = (HEIGHT / 2) - (grid_rows * scaleY * zoom * 0.5)
 
@@ -22,6 +22,7 @@ function love.load()
   bg = new_bg_buffer(my_grid, scaleX, scaleY)
   cell_layer = new_cell_buffer(my_grid, scaleX, scaleY)
   love.graphics.setDefaultFilter("nearest", "nearest", 1)
+  love.graphics.setLineStyle('rough')
 
   -- THREADS
   left_thread  = love.thread.newThread('thread.lua')

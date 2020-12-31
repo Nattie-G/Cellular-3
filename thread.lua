@@ -1,14 +1,14 @@
 --thread.lua (ground up)
 print("thread loaded")
-local ruleset = require 'life'
+local ruleset = require 'gravity'
 require 'love.math'
 require 'love.timer'
 require 'grid'
 
 local name = ...
 
-local grid_cols = 100
-local grid_rows = 300
+local grid_cols = 120
+local grid_rows = 360
 local extra_col = name == 'right' and 0 or grid_cols + 1
 
 local update_channel = love.thread.getChannel(name)

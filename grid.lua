@@ -12,7 +12,7 @@ function new_grid(columns, rows)
     grid[c] = {}
     for r = 0, rows + 1 do
       if r == rows + 1 then
-        grid[c][r] = 0
+        grid[c][r] = 1
       else
         grid[c][r] = 0
       end
@@ -110,7 +110,7 @@ end
 function randomise_board(board)
   for c = 1, #board - 1 do
     for r = 1, #board[1] - 1 do
-      local rand = love.math.random(0, 4)
+      local rand = love.math.random(0, 2)
       if rand == 0 then
         board[c][r] = 1
       else
